@@ -200,6 +200,8 @@ public class AnnotatedBeanDefinitionReader {
 	/**
 	 * Register a bean from the given bean class, deriving its metadata from
 	 * class-declared annotations.
+	 * 注册一个Bean
+	 *
 	 * @param annotatedClass the class of the bean
 	 * @param instanceSupplier a callback for creating an instance of the bean
 	 * (may be {@code null})
@@ -212,17 +214,36 @@ public class AnnotatedBeanDefinitionReader {
 	 */
 	<T> void doRegisterBean(Class<T> annotatedClass, @Nullable Supplier<T> instanceSupplier, @Nullable String name,
 			@Nullable Class<? extends Annotation>[] qualifiers, BeanDefinitionCustomizer... definitionCustomizers) {
-
+		/**
+		 * 根据传入的AnnotatedClass(我们register的时候传入的bean)创建一个AnnotatedGenericBeanDefinition
+		 * AnnotatedGenericBeanDefinition 是spring 描述一个Bean的结构(类似如JAVA 中的Class类)
+		 * AnnotatedGenericBeanDefinition 包含了Bean 的一下其他信息，比如注解（lazy,scope 等等）、元信息(方法的名字，元素等等)
+		 */
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(annotatedClass);
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
 		}
 
 		abd.setInstanceSupplier(instanceSupplier);
+		/**
+		 * 得到类的作用域
+		 */
 		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
+		/**
+		 * 把类的作用域添加到数据结构中去
+		 */
 		abd.setScope(scopeMetadata.getScopeName());
+		/**
+		 * 生成类的名字
+		 */
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
 
+		/**
+		 * 处理Bean当中的比较通用的注解
+		 * 通过观看processCommonDefinitionAnnotations内部代码可以知道
+		 * 判断 bean 是否有Lazy、DependOn、primary、Role、Description
+		 * 处理完成后把是否具有这些注解的信息设置到BD(BeanDefinition，以后的注释中看见BD就是BeanDefintion)中
+		 */
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
 		if (qualifiers != null) {
 			for (Class<? extends Annotation> qualifier : qualifiers) {
