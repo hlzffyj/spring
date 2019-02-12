@@ -260,9 +260,24 @@ public class AnnotatedBeanDefinitionReader {
 		for (BeanDefinitionCustomizer customizer : definitionCustomizers) {
 			customizer.customize(abd);
 		}
-
+		/**
+		 * BeanDefinitionHolder 可以理解为是一个BeanDefinition 的包装类 丰富了很多信息
+		 */
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
+
+		/**
+		 * ScopeProxyMode 对Bean的Scope 进行代理(默认是NO:不代理，INTERFACES：JDK动态代理，TARGET_CLASS：cglib代理)
+		 * 用来解决一个Bean的scope作用域为session等的时候，对Bean进行代理，为每一个session 注入不同的代理Bean
+		 * 当session 存在的时候，Bean真实创建的时候，才会调用该Bean
+		 */
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+
+		/**
+		 * 把上面处理完成的BDH注册给registry
+		 * 这里的registry就是我们的AnnotationConfigApplicationContext
+		 * AnnotationConfigApplicationContext初始化的时候通过调用父类的构造方法实例化一个DefaultListableBeanFactory
+		 * 这里就是将definitionHolder注册到DefaultListableBeanFactory
+		 */
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
 	}
 

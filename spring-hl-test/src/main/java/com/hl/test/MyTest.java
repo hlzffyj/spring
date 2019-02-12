@@ -10,8 +10,8 @@ public class MyTest {
 	public static void main(String[] args) {
 
 		AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(AppConfig.class);
-		MyFactoryBean myFactoryBean = (MyFactoryBean) applicationContext.getBean("&myFactoryBean");
-		myFactoryBean.test();
+		MyBean myBean = (MyBean) applicationContext.getBean("myFactoryBean");
+		myBean.test();
 		System.out.println("MyTest.main");
 	}
 }
