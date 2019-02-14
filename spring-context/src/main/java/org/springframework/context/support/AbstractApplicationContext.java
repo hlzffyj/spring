@@ -511,13 +511,16 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
 		synchronized (this.startupShutdownMonitor) {
-			// Prepare this context for refreshing.
+			/**
+			 * 准备工作 设置启动时间、是否激活标示位等等
+			 * 初始化属性源(property source)配置
+			 */
 			prepareRefresh();
 
-			// Tell the subclass to refresh the internal bean factory.
+			// 获取BeanFactroy (这里默认是DefaultListableBeanFactory),需要对BeanFactory进行设置
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
-			// Prepare the bean factory for use in this context.
+			// 准备BeanFactory(这里非常重要)
 			prepareBeanFactory(beanFactory);
 
 			try {
@@ -594,8 +597,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Initialize any placeholder property sources in the context environment
 		initPropertySources();
 
-		// Validate that all properties marked as required are resolvable
-		// see ConfigurablePropertyResolver#setRequiredProperties
+		// 空方法，spring版本会在后续版本进行实现
 		getEnvironment().validateRequiredProperties();
 
 		// Allow for the collection of early ApplicationEvents,
@@ -624,17 +626,24 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 配置Bean工厂一些特性， 类加载器，post-process等
 	 * Configure the factory's standard context characteristics,
 	 * such as the context's ClassLoader and post-processors.
 	 * @param beanFactory the BeanFactory to configure
 	 */
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
-		// Tell the internal bean factory to use the context's class loader etc.
+		// 添加类加载器
 		beanFactory.setBeanClassLoader(getClassLoader());
+		//bean表达式解析器，为的是能够让BeanFactory去解析Bean表达式
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
+		/**
+		 * 代码的核心
+		 * spring的Bean的扩展：BeanPostProcessor
+		 * 添加一个后置处理器ApplicationContextAwareProcessor 插手Bean的实例化
+		 */
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
@@ -650,7 +659,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
 		beanFactory.registerResolvableDependency(ApplicationContext.class, this);
 
-		// Register early post-processor for detecting inner beans as ApplicationListeners.
+		//这个BeanPostProcessor 是判断spring环境中有没有指定ApplocationListener单例实例化(事件监听器)有的话执行，没有的话移除
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found.

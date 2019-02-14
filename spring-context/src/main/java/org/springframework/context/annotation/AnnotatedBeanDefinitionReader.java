@@ -84,6 +84,9 @@ public class AnnotatedBeanDefinitionReader {
 		Assert.notNull(environment, "Environment must not be null");
 		this.registry = registry;
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+		/**
+		 * context 初始化的时候自动初始化了7个各类，spring最核心的7个类
+		 */
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}
 
@@ -214,7 +217,7 @@ public class AnnotatedBeanDefinitionReader {
 	<T> void doRegisterBean(Class<T> annotatedClass, @Nullable Supplier<T> instanceSupplier, @Nullable String name,
 			@Nullable Class<? extends Annotation>[] qualifiers, BeanDefinitionCustomizer... definitionCustomizers) {
 		/**
-		 * 根据传入的AnnotatedClass(我们register的时候传入的bean)创建一个AnnotatedGenericBeanDefinition
+		 * 根据传入的AnnotatedClass(我们register的时候传入的bean)创建一个AnnotatedGenericBeanDefinition(将Bean 转换成Bd)
 		 * AnnotatedGenericBeanDefinition 是spring 描述一个Bean的结构(类似如JAVA 中的Class类)
 		 * AnnotatedGenericBeanDefinition 包含了Bean 的一下其他信息，比如注解（lazy,scope 等等）、元信息(方法的名字，元素等等)
 		 */

@@ -76,8 +76,12 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		/**
 		 * 创建一个兑取注解的Bean定义读取器
 		 * bean定义 也就是BeanDefinition
+		 * 这里放入了spring 初始化的7个类
 		 */
 		this.reader = new AnnotatedBeanDefinitionReader(this);
+		/**
+		 * 扫描Bean(一个或多个)并转换成Bd(加了注解的Bean)
+		 */
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -102,6 +106,9 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		//在自己的构造方法中初始化一个读取器和扫描器
 		this();
 		register(annotatedClasses);
+		/**
+		 * refresh：初始化spring，准备好bean工厂，实例化对象
+		 */
 		refresh();
 	}
 

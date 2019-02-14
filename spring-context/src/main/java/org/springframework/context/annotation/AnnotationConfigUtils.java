@@ -151,18 +151,31 @@ public abstract class AnnotationConfigUtils {
 		DefaultListableBeanFactory beanFactory = unwrapDefaultListableBeanFactory(registry);
 		if (beanFactory != null) {
 			if (!(beanFactory.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
+				//AnnotationAwareOrderComparator 解析@Order和@Priority 用于排序
 				beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
 			}
 			if (!(beanFactory.getAutowireCandidateResolver() instanceof ContextAnnotationAutowireCandidateResolver)) {
+				//ContextAnnotationAutowireCandidateResolver 提供延迟加载功能
 				beanFactory.setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
 			}
 		}
 
 		Set<BeanDefinitionHolder> beanDefs = new LinkedHashSet<>(8);
-
+		/**
+		 * beanDefinition的注册(spring自己的Bean注册 )，需要弄懂每个Bean的作用
+		 * 先判断DefaultListableBeanFanctory 是不是已经包含这些类
+		 */
 		if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
+			/**
+			 * 将ConfigurationClassPostProcessor转换成一个BD,ConfigurationClassPostProcessor是BeanDefinitionRegistryPostProcessor
+			 * 的一个实现(BeanFactoryPostProcessor的实现类，用于插手BeanFactory操作)
+			 * 通过Beandefinition的一个实现类 RootBeanDefinition/AnnotatedGenericBeanDefinition
+			 */
 			RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);
 			def.setSource(source);
+			/**
+			 * 将ConfigurationClassPostProcessor注册到Factory的BeanDefinitionMap中
+			 */
 			beanDefs.add(registerPostProcessor(registry, def, CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
@@ -213,6 +226,9 @@ public abstract class AnnotationConfigUtils {
 			BeanDefinitionRegistry registry, RootBeanDefinition definition, String beanName) {
 
 		definition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+		/**
+		 * 往Factory 中的BeandefinitionMap中注册一个BD
+		 */
 		registry.registerBeanDefinition(beanName, definition);
 		return new BeanDefinitionHolder(definition, beanName);
 	}
