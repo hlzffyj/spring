@@ -85,7 +85,7 @@ public class AnnotatedBeanDefinitionReader {
 		this.registry = registry;
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
 		/**
-		 * context 初始化的时候自动初始化了7个各类，spring最核心的7个类
+		 * context 初始化的时候自动初始化了7个各类，spring最核心的5个类
 		 */
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}

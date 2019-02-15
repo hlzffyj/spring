@@ -213,7 +213,12 @@ class ConfigurationClassParser {
 		return this.configurationClasses.keySet();
 	}
 
-
+	/**
+	 * 这里就是进行了下类型转换
+	 * 重要的是该方法内部调用的doProcessConfigurationClass
+	 * @param configClass
+	 * @throws IOException
+	 */
 	protected void processConfigurationClass(ConfigurationClass configClass) throws IOException {
 		if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
 			return;
@@ -260,6 +265,7 @@ class ConfigurationClassParser {
 
 		if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
 			// Recursively process any member (nested) classes first
+			//这里是处理内部类
 			processMemberClasses(configClass, sourceClass);
 		}
 
@@ -277,15 +283,20 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @ComponentScan annotations
+		//判断是否有@ComponentScan
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		if (!componentScans.isEmpty() &&
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
 			for (AnnotationAttributes componentScan : componentScans) {
-				// The config class is annotated with @ComponentScan -> perform the scan immediately
+				// 这里是解析componentScan属性 proxyMode,packages等(解析扫描基本信息）
+				/**
+				 * 这里面有个doScan方法用来注册Bean到BeanFactory的Map
+				 */
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
+				//检查扫描出来的Bean 中是否还有@configuration的类
 				for (BeanDefinitionHolder holder : scannedBeanDefinitions) {
 					BeanDefinition bdCand = holder.getBeanDefinition().getOriginatingBeanDefinition();
 					if (bdCand == null) {

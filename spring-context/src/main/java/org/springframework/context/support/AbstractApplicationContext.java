@@ -530,7 +530,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				 */
 				postProcessBeanFactory(beanFactory);
 
-				// Invoke factory processors registered as beans in the context.
+				/**
+				 * 这里从名字里可以看出来，是执行已注册的BeanFactoryPostPorcessor
+				 * 包括自定义的BeanFactoryPostProcessor
+				 * 我们自己可以调用Context.addBeanFactoryPostProcessor方法来把自己自定义的BeanFactoryPostProcessor
+				 * 也可以在我们自己写的BeanFactoryPostProcessor 上增加@component注解交给spring 容器管理
+				 * 加入到spring环境中
+				 * (自定义：我们自己写的BeanFactoryPostProcessor 并且我们没有增加@component注解，没有交给spring管理的)
+				 */
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
@@ -698,8 +705,18 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * Instantiate and invoke all registered BeanFactoryPostProcessor beans,
 	 * respecting explicit order if given.
 	 * <p>Must be called before singleton instantiation.
+	 * 主要是在spring的BeanFactory初始化的过程中去增加一些逻辑处理
+	 * 委托多个实现了BeanDefinitionRegistryPostProcessor接口的类来处理，或者通过实现了BeanFactoryPostProcessor接口类来处理这些事情
+	 * 这里有我们自定义的，也有spring 内部定义的
+	 * 其中ConfigurationClassPostProcessor就是其中一个
+	 * 所以spring要在reader阶段就去加载/读取这个类
 	 */
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
+		/**
+		 *getBeanFactoryPostProcessors方法是获取自定义的BeanFactoryPostProcessor
+		 * context的list: beanFactoryPostProcessors 存放的是我们自定义的BeanFactotyPostProcessor(自定义：我们自己写的BeanFactoryPostProcessor
+		 * 并且我们没有增加@component注解，没有交给spring管理的)
+		 */
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime

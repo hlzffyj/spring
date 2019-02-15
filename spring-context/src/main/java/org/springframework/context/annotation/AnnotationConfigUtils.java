@@ -170,6 +170,7 @@ public abstract class AnnotationConfigUtils {
 			 * 将ConfigurationClassPostProcessor转换成一个BD,ConfigurationClassPostProcessor是BeanDefinitionRegistryPostProcessor
 			 * 的一个实现(BeanFactoryPostProcessor的实现类，用于插手BeanFactory操作)
 			 * 通过Beandefinition的一个实现类 RootBeanDefinition/AnnotatedGenericBeanDefinition
+			 * 在context中的invokeBeanFactoryPostProcessors方法中会对他进行处理
 			 */
 			RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);
 			def.setSource(source);

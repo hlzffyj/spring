@@ -111,7 +111,9 @@ abstract class ConfigurationClassUtils {
 				return false;
 			}
 		}
-
+		//判断是否加了@configuration注解
+		//如果加了注解Bd configurationClass属性设置为full 返回true
+		//不是设置为lite 并返回false
 		if (isFullConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}

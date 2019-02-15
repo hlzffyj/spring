@@ -257,11 +257,15 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	/**
 	 * Build and validate a configuration model based on the registry of
 	 * {@link Configuration} classes.
+	 * 取出所有的Bd,然后判断Bd是否包含了@configuration、@service...注解
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
+		//获取容器中所有BeanDefinition名字
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
+		//判断这些类有没有被处理过 处理过就不再处理
+		//没有处理过则将Bean 转换为Bd，并添加到configCandidates 当中
 		for (String beanName : candidateNames) {
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef) ||
@@ -305,13 +309,16 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		}
 
 		// Parse each @Configuration class
+		//扫描包
 		ConfigurationClassParser parser = new ConfigurationClassParser(
 				this.metadataReaderFactory, this.problemReporter, this.environment,
 				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
-
+		//多个配置类怕重复，这里进行一个去重
+		//alreadyParsed 用来判断是否处理过
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
+			//扫描所有Bean 并放入到defaultListableBeanFactory的beanDefaultMap中(BeanFactory中最主要的也就是这个Map)
 			parser.parse(candidates);
 			parser.validate();
 
