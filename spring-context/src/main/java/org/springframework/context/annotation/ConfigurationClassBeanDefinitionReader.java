@@ -133,15 +133,16 @@ class ConfigurationClassBeanDefinitionReader {
 			this.importRegistry.removeImportingClass(configClass.getMetadata().getClassName());
 			return;
 		}
-
+		//一个类是Imported 相关的接口的类（例如 ImportSelector）
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
-
+		//xml注入进来的Bean
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+		//注册Registrar
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 
@@ -211,14 +212,19 @@ class ConfigurationClassBeanDefinitionReader {
 		ConfigurationClassBeanDefinition beanDef = new ConfigurationClassBeanDefinition(configClass, metadata);
 		beanDef.setResource(configClass.getResource());
 		beanDef.setSource(this.sourceExtractor.extractSource(metadata, configClass.getResource()));
-
+		/**
+		 * 在加载@Bean的时候
+		 * 判断这个方法是否是静态的
+		 */
 		if (metadata.isStatic()) {
 			// static @Bean method
+			//如果是静态的直接获取实例该类
 			beanDef.setBeanClassName(configClass.getMetadata().getClassName());
 			beanDef.setFactoryMethodName(methodName);
 		}
 		else {
 			// instance @Bean method
+			//如果不是静态的话，设置的是一个Factory，获取这个Bean 以后会从Factory 获取
 			beanDef.setFactoryBeanName(configClass.getBeanName());
 			beanDef.setUniqueFactoryMethodName(methodName);
 		}

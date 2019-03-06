@@ -81,6 +81,8 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		this.reader = new AnnotatedBeanDefinitionReader(this);
 		/**
 		 * 扫描Bean(一个或多个)并转换成Bd(加了注解的Bean)
+		 * 在spring的初始化中实际上使用的扫描器并不是这里的这个
+		 * 这里new 一个出来只是为了让程序员在Context调用的时候手动增加需要扫描的packages`
 		 */
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}

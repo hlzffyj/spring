@@ -817,13 +817,33 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+		/**
+		 * 获取BeanFactory 中所有需要初始化话的BeanName
+		 */
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
+		/**
+		 * 准备实例化
+		 * 触发所有的非懒加载的Bean的单例实例化，主要方法是getBean
+		 */
 		for (String beanName : beanNames) {
+			/**
+			 * 合并父类(只在xml 中使用) 这个知识点使用很少
+			 * 如果没有父类，拿出该BD
+			 */
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			/**
+			 * 判断Bd 不是抽象且是单例且不是懒加载 这样才会去实例化
+			 */
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				/**
+				 * 判断是否是FactoryBean(因为FactoryBean获取本身比较特殊 所以这里特殊处理例如 需要bean 那么是&factoryBean 才能获取到)
+				 */
 				if (isFactoryBean(beanName)) {
+					/**
+					 * 这里是对盘点时FantoryBean的beanName前面拼上&
+					 */
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
 						final FactoryBean<?> factory = (FactoryBean<?>) bean;
@@ -843,6 +863,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 					}
 				}
 				else {
+					/**
+					 * 所以普通类会执行这个方法
+					 */
 					getBean(beanName);
 				}
 			}

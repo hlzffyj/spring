@@ -74,7 +74,9 @@ class ConfigurationClassEnhancer {
 
 	// The callbacks to use. Note that these callbacks must be stateless.
 	private static final Callback[] CALLBACKS = new Callback[] {
+			//增强方法 主要控制Bean的作用域，不每次都去new 对象
 			new BeanMethodInterceptor(),
+			//设置一个BeanFactory 接口
 			new BeanFactoryAwareMethodInterceptor(),
 			NoOp.INSTANCE
 	};
@@ -95,6 +97,7 @@ class ConfigurationClassEnhancer {
 	 * @return the enhanced subclass
 	 */
 	public Class<?> enhance(Class<?> configClass, @Nullable ClassLoader classLoader) {
+		//判断是否被代理过
 		if (EnhancedConfiguration.class.isAssignableFrom(configClass)) {
 			if (logger.isDebugEnabled()) {
 				logger.debug(String.format("Ignoring request to enhance %s as it has " +
@@ -106,6 +109,7 @@ class ConfigurationClassEnhancer {
 			}
 			return configClass;
 		}
+		//这里进行了cglib 代理
 		Class<?> enhancedClass = createClass(newEnhancer(configClass, classLoader));
 		if (logger.isTraceEnabled()) {
 			logger.trace(String.format("Successfully enhanced %s; enhanced class name is: %s",
@@ -119,11 +123,26 @@ class ConfigurationClassEnhancer {
 	 */
 	private Enhancer newEnhancer(Class<?> configSuperClass, @Nullable ClassLoader classLoader) {
 		Enhancer enhancer = new Enhancer();
+		//增强父类，cglib动态代理是基于继承来的
 		enhancer.setSuperclass(configSuperClass);
+		//增强接口，EnhancedConfiguration实现了BeanFactory，实现类可以获得BeanFactory
+		//后续从BeanFactory获取目标类
 		enhancer.setInterfaces(new Class<?>[] {EnhancedConfiguration.class});
 		enhancer.setUseFactory(false);
 		enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
+		/**
+		 * BeanFactoryAwareGeneratorStrategy 是一个生成策略
+		 * 主要为生成CGLIB类中添加成员变量$$beanFactory
+		 * 同时基于接口EnhancedConfiguration的父接口BeanFactoryAware中的setBeanFactory方法
+		 * 设置此变量值为当前Context中的beanFactory，因此Cglib代理对象就有了BeanFactory
+		 * 有了factory就能获取被代理的对象，而不用通过其他方式获取对象
+		 * 该BeanFactory的作用是this(AnntationApplicationContext)调用时拦截调用，并直接在beanFactory中获得目标bean
+		 *
+		 */
 		enhancer.setStrategy(new BeanFactoryAwareGeneratorStrategy(classLoader));
+		/**
+		 * 过滤方法，不能每次都去new，只在第一次的时候进行new
+		 */
 		enhancer.setCallbackFilter(CALLBACK_FILTER);
 		enhancer.setCallbackTypes(CALLBACK_FILTER.getCallbackTypes());
 		return enhancer;
@@ -315,7 +334,8 @@ class ConfigurationClassEnhancer {
 		@Nullable
 		public Object intercept(Object enhancedConfigInstance, Method beanMethod, Object[] beanMethodArgs,
 					MethodProxy cglibMethodProxy) throws Throwable {
-
+			//enhancedConfigInstance 代理
+			//通过enhancedConfigInstance中的cglib生成的成员变量$$BeanFactory获得BeanFactory(实现EnhanceConfguration接口来获取BeanFactory)
 			ConfigurableBeanFactory beanFactory = getBeanFactory(enhancedConfigInstance);
 			String beanName = BeanAnnotationHelper.determineBeanNameFor(beanMethod);
 
@@ -345,7 +365,8 @@ class ConfigurationClassEnhancer {
 					return enhanceFactoryBean(factoryBean, beanMethod.getReturnType(), beanFactory, beanName);
 				}
 			}
-
+			//spring 内部判断是new 还是get
+			//判断执行的方法和调用方法是不是同一个方法
 			if (isCurrentlyInvokedFactoryMethod(beanMethod)) {
 				// The factory is calling the bean method in order to instantiate and register the bean
 				// (i.e. via a getBean() call) -> invoke the super implementation of the method to actually
@@ -373,6 +394,10 @@ class ConfigurationClassEnhancer {
 			// the bean method, direct or indirect. The bean may have already been marked
 			// as 'in creation' in certain autowiring scenarios; if so, temporarily set
 			// the in-creation status to false in order to avoid an exception.
+			/**
+			 * 判断这个Bean 是否被创建
+			 * 如果已经创建则同归BeanFactory 获取，如果没有被创建，则创建一个实例
+			 */
 			boolean alreadyInCreation = beanFactory.isCurrentlyInCreation(beanName);
 			try {
 				if (alreadyInCreation) {
@@ -395,7 +420,7 @@ class ConfigurationClassEnhancer {
 				if (!ClassUtils.isAssignableValue(beanMethod.getReturnType(), beanInstance)) {
 					// Detect package-protected NullBean instance through equals(null) check
 					if (beanInstance.equals(null)) {
-						if (logger.isDebugEnabled()) {
+						if (logger.isDebugEnabled() ) {
 							logger.debug(String.format("@Bean method %s.%s called as bean reference " +
 									"for type [%s] returned null bean; resolving to null value.",
 									beanMethod.getDeclaringClass().getSimpleName(), beanMethod.getName(),

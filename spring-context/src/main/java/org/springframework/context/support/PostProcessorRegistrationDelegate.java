@@ -35,6 +35,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.OrderComparator;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
@@ -90,6 +91,7 @@ final class PostProcessorRegistrationDelegate {
 			// 这个类就是一个spring内部的BeanDefinitionRegistryPostProcessor
 			// 这段代码就是在把spring 自己实现的BeanDefinitionRegistryPostProcessor 放入到currentRegistryProcessors list当中
 
+
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
@@ -98,7 +100,7 @@ final class PostProcessorRegistrationDelegate {
 					processedBeans.add(ppName);
 				}
 			}
-			//对	currentRegistryProcessors 进行排序 这里并不用关系spring做了什么
+			//对	currentRegistryProcessors 进行排序 这里并不用关心spring做了什么
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
 			//把我们自定的BeanDefinitionRegistryPostProcessor集合 和Spring定义的BeanDefinitionRegistryPostProcessor集合做一个合并
 			registryProcessors.addAll(currentRegistryProcessors);
@@ -106,12 +108,24 @@ final class PostProcessorRegistrationDelegate {
 			 * 核心代码
 			 * 这里就是循环所有的BeanDefinitionRegistryPostProcessor类
 			 * 这个方法内进行BeanDefinitionRegistryPostProcessor执行
+			 * 这里只会指定BeanDefinitionRegistryPostProcessor扩展的方法postProcessBeanDefinitionRegistry
+			 * BeanFactoryPostProcessor 的postProcessBeanFactory方法则不会在这里执行
+			 *我看到这里的时候前后观察了 spring预先加载的几个类，发现这里第一次循环其实执行的也就只有一个
+			 * ConfigurationClassPostProcessor 因为只有它的类型是BeanDefinitionRegistryPostProcessor(没有手动加载BeanDefinitionRegistryPostProcessor的情况下)
+			 * 这里其实就是执行ConfigurationClassPostProcessor的postProcessBeanDefinitionRegistry方法
 			 */
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
 			//清空集合
 			currentRegistryProcessors.clear();
 
-			// Next, invoke the BeanDefinitionRegistryPostProcessors that implement Ordered.
+			/**
+			 * 再次将上段代码的循环逻辑执行一遍
+			 * ConfigurationClassPostProcessor的postProcessBeanDefinitionRegistry调用processConfigBeanDefinitions方法
+			 * 在调用ConfigurationClassParser parser方法中有对ComponentScan的执行，会扫描我们加了注解的@component，@Bean等的Bean
+			 * 该循环的目的是将我们自己实现的BeanDefinitionRegistryPostProcessor加载进来同样去执行postProcessBeanDefinitionRegistry方法
+			 *
+			 */
+
 			postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
 				if (!processedBeans.contains(ppName) && beanFactory.isTypeMatch(ppName, Ordered.class)) {
@@ -121,10 +135,14 @@ final class PostProcessorRegistrationDelegate {
 			}
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
 			registryProcessors.addAll(currentRegistryProcessors);
+			/**
+			 * 这里执行所有的BeanDefinitionRegistryPostProcessor的postProcessBeanDefinitionRegistry
+			 */
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
 			currentRegistryProcessors.clear();
 
 			// Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
+
 			boolean reiterate = true;
 			while (reiterate) {
 				reiterate = false;
@@ -142,8 +160,19 @@ final class PostProcessorRegistrationDelegate {
 				currentRegistryProcessors.clear();
 			}
 
-			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
+			/**
+			 *这是执行的是BeanFactoryPostProcessor
+			 * 前面执行的都是BeanFactoryPostProcessor的子类BeanDefinitionRegistryPostProcessor的postProcessBeanDefinitionRegistry
+			 * 这里是执行postProcessBeanFactory
+			 */
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
+			/**
+			 * 执行自定义BeanFactoryPostProcessor
+			 * 1、在prepareBeanFactor配置工厂的时候加入的ApplicationContextAwareProcessor
+			 * 2、同样是在这里进行加载的	ApplicationListenerDetector
+			 * 3、importAwareBeanPostPorcessor在invokeBeanFactoryPostProcessors方法调用处理
+			 * invokeBeanFactoryPostProcessors去处理BeanFactoryPostPorcessor中的postProcessBeanFactory中添加的
+			 */
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
 		}
 
@@ -319,6 +348,9 @@ final class PostProcessorRegistrationDelegate {
 	 * BeanPostProcessor that logs an info message when a bean is created during
 	 * BeanPostProcessor instantiation, i.e. when a bean is not eligible for
 	 * getting processed by all BeanPostProcessors.
+	 *
+	 * spring 配置中的Bean后置处理器还没有被注册就已经开始了Bean的初始化
+	 * 就会执行BeanPostProcessorChecker 并打印信息
 	 */
 	private static final class BeanPostProcessorChecker implements BeanPostProcessor {
 

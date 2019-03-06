@@ -260,6 +260,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * 取出所有的Bd,然后判断Bd是否包含了@configuration、@service...注解
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
+		//这里存放app提供的bd (项目中提供了@Compent)
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
 		//获取容器中所有BeanDefinition名字
 		String[] candidateNames = registry.getBeanDefinitionNames();
@@ -268,12 +269,27 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		//没有处理过则将Bean 转换为Bd，并添加到configCandidates 当中
 		for (String beanName : candidateNames) {
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
+
+			/**
+			 * 如果加了Configuration注解，该类会被标记Full,否则标记为Lite
+			 * 标记Lite配置类，在spring内部会将这个bean的实力原原本本实例化
+			 * 标记为Full配置类,在spring内部会对这个bean进行cgilb代理的类了
+			 */
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef) ||
 					ConfigurationClassUtils.isLiteConfigurationClass(beanDef)) {
+				//果BeanDefinition中的configurationClass属性为full或者lite,则意味着已经处理过了,直接跳过
+				//这里需要结合下面的代码才能理解
 				if (logger.isDebugEnabled()) {
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
+			/**
+			 * 判断是否是Configuration类，如果加了@Configuration下面的这几个注解就不再判断了，没加@Configuration
+			 * Component.class
+			 * ComponentScan.class
+			 * Import.class
+			 * ImportResource.class
+			 */
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
@@ -291,12 +307,16 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			return Integer.compare(i1, i2);
 		});
 
-		// Detect any custom bean name generation strategy supplied through the enclosing application context
+		/**
+		 * 在spring刚开始Reader中初始化的DefaultListableBeanFactory 最终实现的接口里有SingletonBeanRegistry
+		 */
 		SingletonBeanRegistry sbr = null;
 		if (registry instanceof SingletonBeanRegistry) {
 			sbr = (SingletonBeanRegistry) registry;
 			if (!this.localBeanNameGeneratorSet) {
 				BeanNameGenerator generator = (BeanNameGenerator) sbr.getSingleton(CONFIGURATION_BEAN_NAME_GENERATOR);
+				//SingletonBeanRegistry中有id为 org.springframework.context.annotation.internalConfigurationBeanNameGenerator
+				//如果有则利用他的，否则则是spring自己的
 				if (generator != null) {
 					this.componentScanBeanNameGenerator = generator;
 					this.importBeanNameGenerator = generator;
@@ -318,7 +338,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
-			//扫描所有Bean 并放入到defaultListableBeanFactory的beanDefaultMap中(BeanFactory中最主要的也就是这个Map)
+			//扫描所有Bean 并放入到defaultListableBeanFactory的beanDefaultMap中(Factory中最主要的也就是这个Map)
 			parser.parse(candidates);
 			parser.validate();
 
@@ -331,6 +351,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 						registry, this.sourceExtractor, this.resourceLoader, this.environment,
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
+			//从Bd到Map 除了普通类(就是我们自己声明并加了@Component的类)
 			this.reader.loadBeanDefinitions(configClasses);
 			alreadyParsed.addAll(configClasses);
 
@@ -378,6 +399,9 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		Map<String, AbstractBeanDefinition> configBeanDefs = new LinkedHashMap<>();
 		for (String beanName : beanFactory.getBeanDefinitionNames()) {
 			BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
+			/**
+			 * 判断一个类是full或者lite
+			 */
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef)) {
 				if (!(beanDef instanceof AbstractBeanDefinition)) {
 					throw new BeanDefinitionStoreException("Cannot enhance @Configuration bean definition '" +
